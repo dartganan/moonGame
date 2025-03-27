@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pouso Lunar</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Carregando o Three.js via CDN antes de qualquer outro script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="game-container">
+        <div id="hud">
+            <div id="fuel-container">
+                <div id="fuel-label">Combustível:</div>
+                <div id="fuel-bar-container">
+                    <div id="fuel-bar"></div>
+                </div>
+                <div id="fuel-percentage">100%</div>
+            </div>
+            <div id="velocity">Velocidade: 0 m/s</div>
+            <div id="altitude">Altitude: 0 m</div>
+        </div>
+        <div id="game-over" class="hidden">
+            <div id="game-over-text"></div>
+            <button id="restart-button">Reiniciar</button>
+        </div>
+        <div id="instructions" class="overlay">
+            <h2>Instruções</h2>
+            <p>Controle a cápsula lunar e pouse suavemente na superfície da lua.</p>
+            <ul>
+                <li>Use as setas ← → para controlar a direção</li>
+                <li>Use a seta ↑ para ativar os propulsores</li>
+                <li>Colete os tanques de combustível para não ficar sem energia</li>
+                <li>Pouse com uma velocidade menor que 5 m/s para um pouso seguro</li>
+            </ul>
+            <button id="start-button">Iniciar</button>
+        </div>
+    </div>
+    
+    <!-- Carregando o script do jogo após o body para garantir que os elementos HTML estejam disponíveis -->
+    <script src="js/game-simple.js"></script>
+</body>
+</html>
