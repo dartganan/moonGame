@@ -357,22 +357,20 @@ function updatePhysics(deltaTime) {
     keepInBounds();
 }
 
-// Manter a cápsula dentro dos limites da tela
+// Manter a cápsula dentro dos limites da tela (com efeito wrap-around)
 function keepInBounds() {
     const aspectRatio = window.innerWidth / window.innerHeight;
     const viewSize = 200;
     const horizontalBound = aspectRatio * viewSize / 2;
     
-    // Verificar limites horizontais
+    // Implementar efeito wrap-around para limites horizontais
     if (lander.position.x < -horizontalBound) {
-        lander.position.x = -horizontalBound;
-        gameState.velocity.x = 0;
-    } else if (lander.position.x > horizontalBound) {
         lander.position.x = horizontalBound;
-        gameState.velocity.x = 0;
+    } else if (lander.position.x > horizontalBound) {
+        lander.position.x = -horizontalBound;
     }
     
-    // Verificar limite vertical superior
+    // Verificar limite vertical superior (sem wrap-around)
     if (lander.position.y > viewSize / 2) {
         lander.position.y = viewSize / 2;
         gameState.velocity.y = 0;
