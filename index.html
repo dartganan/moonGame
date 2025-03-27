@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pouso Lunar</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Carregando o Three.js via CDN antes de qualquer outro script -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Importando o Three.js via npm em vez de CDN -->
 </head>
 <body>
     <div id="game-container">
@@ -38,7 +37,7 @@
         </div>
     </div>
     
-    <!-- Carregando o script do jogo após o body para garantir que os elementos HTML estejam disponíveis -->
-    <script src="js/game-simple.js"></script>
+    <!-- Usando o tipo module para importar scripts ES6 -->
+    <script type="module" src="/js/game-simple.js"></script>
 </body>
 </html>

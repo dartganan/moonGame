@@ -1,4 +1,5 @@
 // Jogo de Pouso Lunar com Three.js - Versão 2D
+import * as THREE from 'three';
 
 // Variáveis globais
 let scene, camera, renderer;
