@@ -445,23 +445,106 @@ function createLander() {
 
 // Criar tanques de combustível
 function createFuelTanks(count) {
-    const fuelTankGeometry = new THREE.CircleGeometry(3, 16);
-    const fuelTankMaterial = new THREE.MeshStandardMaterial({
-        color: 0xFF0000,
-        emissive: 0x330000
-    });
-    
     for (let i = 0; i < count; i++) {
-        const fuelTank = new THREE.Mesh(fuelTankGeometry, fuelTankMaterial);
+        // Grupo para o tanque de combustível
+        const fuelTankGroup = new THREE.Group();
         
-        // Posição aleatória
+        // Corpo principal do tanque (cilindro)
+        const tankBodyGeometry = new THREE.CylinderGeometry(2.5, 2.5, 5, 16);
+        // Rotacionar o cilindro para ficar deitado
+        tankBodyGeometry.rotateZ(Math.PI / 2);
+        
+        const tankBodyMaterial = new THREE.MeshStandardMaterial({
+            color: 0xDD3311,
+            metalness: 0.7,
+            roughness: 0.2,
+            emissive: 0x330000,
+            emissiveIntensity: 0.2
+        });
+        
+        const tankBody = new THREE.Mesh(tankBodyGeometry, tankBodyMaterial);
+        fuelTankGroup.add(tankBody);
+        
+        // Tampas laterais do tanque (círculos)
+        const capGeometry = new THREE.CircleGeometry(2.5, 16);
+        const capMaterial = new THREE.MeshStandardMaterial({
+            color: 0xCCCCCC,
+            metalness: 0.8,
+            roughness: 0.1
+        });
+        
+        // Tampa esquerda
+        const leftCap = new THREE.Mesh(capGeometry, capMaterial);
+        leftCap.position.set(-2.5, 0, 0);
+        leftCap.rotation.y = Math.PI / 2;
+        fuelTankGroup.add(leftCap);
+        
+        // Tampa direita
+        const rightCap = new THREE.Mesh(capGeometry, capMaterial);
+        rightCap.position.set(2.5, 0, 0);
+        rightCap.rotation.y = -Math.PI / 2;
+        fuelTankGroup.add(rightCap);
+        
+        // Detalhes - Faixas decorativas
+        const stripeGeometry = new THREE.BoxGeometry(5.1, 0.5, 0.1);
+        const stripeMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFCC00,
+            emissive: 0x553300,
+            emissiveIntensity: 0.3
+        });
+        
+        // Faixa superior
+        const topStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+        topStripe.position.set(0, 1.5, 0);
+        fuelTankGroup.add(topStripe);
+        
+        // Faixa inferior
+        const bottomStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+        bottomStripe.position.set(0, -1.5, 0);
+        fuelTankGroup.add(bottomStripe);
+        
+        // Símbolo de combustível
+        const symbolShape = new THREE.Shape();
+        symbolShape.moveTo(-0.8, 1);
+        symbolShape.lineTo(0.8, 1);
+        symbolShape.lineTo(0.8, -1);
+        symbolShape.lineTo(-0.8, -1);
+        symbolShape.lineTo(-0.8, 1);
+        
+        // Recorte interno para criar o símbolo de gota
+        const holeShape = new THREE.Shape();
+        holeShape.moveTo(0, 0.6);
+        holeShape.bezierCurveTo(0.4, 0.2, 0.4, -0.6, 0, -0.6);
+        holeShape.bezierCurveTo(-0.4, -0.6, -0.4, 0.2, 0, 0.6);
+        symbolShape.holes.push(holeShape);
+        
+        const symbolGeometry = new THREE.ShapeGeometry(symbolShape);
+        const symbolMaterial = new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            side: THREE.DoubleSide
+        });
+        
+        const symbol = new THREE.Mesh(symbolGeometry, symbolMaterial);
+        symbol.position.set(0, 0, 2.6);
+        symbol.rotation.y = Math.PI / 2;
+        fuelTankGroup.add(symbol);
+        
+        // Efeito de brilho (luz pontual)
+        const light = new THREE.PointLight(0xFF5500, 0.5, 10);
+        light.position.set(0, 0, 0);
+        fuelTankGroup.add(light);
+        
+        // Posição aleatória para o tanque
         const x = (Math.random() - 0.5) * 400;
         const y = 50 + Math.random() * 100;
         
-        fuelTank.position.set(x, y, 0);
+        fuelTankGroup.position.set(x, y, 0);
         
-        scene.add(fuelTank);
-        fuelTanks.push(fuelTank);
+        // Adicionar rotação aleatória para variedade visual
+        fuelTankGroup.rotation.z = Math.random() * Math.PI * 2;
+        
+        scene.add(fuelTankGroup);
+        fuelTanks.push(fuelTankGroup);
     }
 }
 
@@ -469,12 +552,13 @@ function createFuelTanks(count) {
 function createThrusterEffect() {
     if (!gameState.thrusterActive || gameState.fuel <= 0) return;
     
-    // Criar um efeito simples de propulsor (triângulo)
+    // Criar um efeito mais realista de propulsor (chama)
     const thrusterShape = new THREE.Shape();
-    thrusterShape.moveTo(0, -5);   // Topo do propulsor
-    thrusterShape.lineTo(-2, -10); // Base esquerda
-    thrusterShape.lineTo(2, -10);  // Base direita
-    thrusterShape.lineTo(0, -5);   // Voltar ao topo
+    thrusterShape.moveTo(0, 0);      // Ponto de saída do propulsor
+    thrusterShape.lineTo(-1.5, -4);  // Lado esquerdo da chama
+    thrusterShape.lineTo(0, -6);     // Ponta da chama
+    thrusterShape.lineTo(1.5, -4);   // Lado direito da chama
+    thrusterShape.lineTo(0, 0);      // Voltar ao ponto de saída
     
     const thrusterGeometry = new THREE.ShapeGeometry(thrusterShape);
     const thrusterMaterial = new THREE.MeshBasicMaterial({
@@ -489,12 +573,13 @@ function createThrusterEffect() {
     // Aplicar rotação da cápsula ao propulsor
     thruster.rotation.z = lander.rotation.z;
     
-    // Posicionar o propulsor abaixo da cápsula
-    // Usando o negativo da posição X para inverter a direção do propulsor
-    const position = new THREE.Vector3(0, -8, 0);
-    position.applyAxisAngle(new THREE.Vector3(0, 0, 1), lander.rotation.z);
-    thruster.position.x = lander.position.x - position.x;
-    thruster.position.y = lander.position.y + position.y;
+    // Posicionar o propulsor exatamente na saída do propulsor da nave
+    // Calculamos a posição com base na geometria do propulsor que definimos na função createLander
+    const thrusterExitPoint = new THREE.Vector3(0, -5.5, 0);
+    thrusterExitPoint.applyAxisAngle(new THREE.Vector3(0, 0, 1), lander.rotation.z);
+    
+    thruster.position.x = lander.position.x + thrusterExitPoint.x;
+    thruster.position.y = lander.position.y + thrusterExitPoint.y;
     
     scene.add(thruster);
     
@@ -816,7 +901,11 @@ function checkFuelTankCollisions() {
             Math.pow(lander.position.y - fuelTank.position.y, 2)
         );
         
-        if (distance < 10) {
+        // Raio de colisão aumentado para o novo design do tanque
+        if (distance < 12) {
+            // Efeito visual de coleta
+            createFuelCollectionEffect(fuelTank.position.x, fuelTank.position.y);
+            
             // Coletar combustível
             gameState.fuel = Math.min(gameState.fuel + 25, 100);
             updateFuelDisplay();
@@ -832,6 +921,51 @@ function checkFuelTankCollisions() {
                 }
             }, 5000);
         }
+    }
+}
+
+// Criar efeito visual de coleta de combustível
+function createFuelCollectionEffect(x, y) {
+    // Criar partículas para o efeito visual
+    const particleCount = 20;
+    const particleGeometry = new THREE.CircleGeometry(0.3, 8);
+    
+    // Cores para o efeito (amarelo e laranja)
+    const colors = [0xFFCC00, 0xFF9900, 0xFFFF00];
+    
+    for (let i = 0; i < particleCount; i++) {
+        const material = new THREE.MeshBasicMaterial({
+            color: colors[Math.floor(Math.random() * colors.length)],
+            transparent: true,
+            opacity: 1.0
+        });
+        
+        const particle = new THREE.Mesh(particleGeometry, material);
+        
+        // Posicionar partícula na posição do tanque
+        particle.position.set(
+            x + (Math.random() * 8 - 4),
+            y + (Math.random() * 8 - 4),
+            0
+        );
+        
+        // Velocidade aleatória
+        particle.userData = {
+            velocity: {
+                x: (Math.random() - 0.5) * 10,
+                y: (Math.random() - 0.5) * 10
+            },
+            rotation: Math.random() * 0.2 - 0.1,
+            opacity: 1.0,
+            life: 1.0 // Tempo de vida em segundos
+        };
+        
+        scene.add(particle);
+        
+        // Remover a partícula após um tempo
+        setTimeout(() => {
+            scene.remove(particle);
+        }, 1000);
     }
 }
 
