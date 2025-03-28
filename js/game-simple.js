@@ -278,40 +278,167 @@ function createLander() {
     lander = new THREE.Group();
     lander.position.set(0, gameState.altitude, 0);
     
-    // Corpo da cápsula (um triângulo para visão 2D)
+    // Corpo principal da cápsula (mais arredondado e detalhado)
     const bodyShape = new THREE.Shape();
-    bodyShape.moveTo(0, 5);  // Topo
-    bodyShape.lineTo(-5, -5); // Base esquerda
-    bodyShape.lineTo(5, -5);  // Base direita
-    bodyShape.lineTo(0, 5);   // Voltar ao topo
+    
+    // Parte superior arredondada
+    bodyShape.moveTo(0, 6);  // Topo
+    bodyShape.bezierCurveTo(
+        -3, 5,   // Controle 1
+        -6, 0,   // Controle 2
+        -5, -4   // Ponto final
+    );
+    
+    // Base da nave
+    bodyShape.lineTo(5, -4);
+    
+    // Lado direito arredondado
+    bodyShape.bezierCurveTo(
+        6, 0,    // Controle 1
+        3, 5,    // Controle 2
+        0, 6     // Voltar ao topo
+    );
     
     const bodyGeometry = new THREE.ShapeGeometry(bodyShape);
     const bodyMaterial = new THREE.MeshStandardMaterial({
-        color: 0xCCCCCC,
-        side: THREE.DoubleSide
+        color: 0xDDDDDD,
+        side: THREE.DoubleSide,
+        metalness: 0.5,
+        roughness: 0.3
     });
     
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
     lander.add(body);
     
-    // Pernas de pouso
-    const legMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+    // Janela/visor da cabine
+    const windowShape = new THREE.Shape();
+    windowShape.arc(0, 1, 2, 0, Math.PI * 2, false);
     
-    // Perna esquerda
+    const windowGeometry = new THREE.ShapeGeometry(windowShape);
+    const windowMaterial = new THREE.MeshStandardMaterial({
+        color: 0x88CCFF,
+        emissive: 0x113355,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.8
+    });
+    
+    const window = new THREE.Mesh(windowGeometry, windowMaterial);
+    lander.add(window);
+    
+    // Detalhes do corpo - Painéis laterais
+    const leftPanelShape = new THREE.Shape();
+    leftPanelShape.moveTo(-4, 0);
+    leftPanelShape.lineTo(-5, -2);
+    leftPanelShape.lineTo(-3, -2);
+    leftPanelShape.lineTo(-2, 0);
+    
+    const leftPanelGeometry = new THREE.ShapeGeometry(leftPanelShape);
+    const panelMaterial = new THREE.MeshStandardMaterial({
+        color: 0x444444,
+        side: THREE.DoubleSide
+    });
+    
+    const leftPanel = new THREE.Mesh(leftPanelGeometry, panelMaterial);
+    lander.add(leftPanel);
+    
+    // Painel direito (espelhado)
+    const rightPanelShape = new THREE.Shape();
+    rightPanelShape.moveTo(4, 0);
+    rightPanelShape.lineTo(5, -2);
+    rightPanelShape.lineTo(3, -2);
+    rightPanelShape.lineTo(2, 0);
+    
+    const rightPanelGeometry = new THREE.ShapeGeometry(rightPanelShape);
+    const rightPanel = new THREE.Mesh(rightPanelGeometry, panelMaterial);
+    lander.add(rightPanel);
+    
+    // Antena no topo
+    const antennaGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 6, 0),
+        new THREE.Vector3(0, 8, 0)
+    ]);
+    const antennaMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+    const antenna = new THREE.Line(antennaGeometry, antennaMaterial);
+    lander.add(antenna);
+    
+    // Ponta da antena
+    const antennaTipGeometry = new THREE.CircleGeometry(0.3, 8);
+    const antennaTipMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFF0000,
+        emissive: 0x330000
+    });
+    const antennaTip = new THREE.Mesh(antennaTipGeometry, antennaTipMaterial);
+    antennaTip.position.set(0, 8, 0);
+    lander.add(antennaTip);
+    
+    // Propulsor principal
+    const thrusterShape = new THREE.Shape();
+    thrusterShape.moveTo(-2, -4);
+    thrusterShape.lineTo(2, -4);
+    thrusterShape.lineTo(1.5, -5.5);
+    thrusterShape.lineTo(-1.5, -5.5);
+    thrusterShape.lineTo(-2, -4);
+    
+    const thrusterGeometry = new THREE.ShapeGeometry(thrusterShape);
+    const thrusterMaterial = new THREE.MeshStandardMaterial({
+        color: 0x333333,
+        side: THREE.DoubleSide
+    });
+    
+    const thruster = new THREE.Mesh(thrusterGeometry, thrusterMaterial);
+    lander.add(thruster);
+    
+    // Pernas de pouso mais detalhadas
+    const legMaterial = new THREE.LineBasicMaterial({ color: 0x888888, linewidth: 2 });
+    
+    // Perna esquerda com suporte
     const leftLegGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-3, -5, 0),
-        new THREE.Vector3(-6, -8, 0)
+        new THREE.Vector3(-3, -4, 0),  // Conexão com o corpo
+        new THREE.Vector3(-6, -8, 0)   // Base da perna
     ]);
     const leftLeg = new THREE.Line(leftLegGeometry, legMaterial);
     lander.add(leftLeg);
     
-    // Perna direita
+    // Suporte diagonal para a perna esquerda
+    const leftSupportGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-4.5, -2, 0),  // Conexão com o corpo mais acima
+        new THREE.Vector3(-6, -8, 0)     // Base da perna
+    ]);
+    const leftSupport = new THREE.Line(leftSupportGeometry, legMaterial);
+    lander.add(leftSupport);
+    
+    // Base da perna esquerda
+    const leftFootGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-7, -8, 0),
+        new THREE.Vector3(-5, -8, 0)
+    ]);
+    const leftFoot = new THREE.Line(leftFootGeometry, legMaterial);
+    lander.add(leftFoot);
+    
+    // Perna direita com suporte
     const rightLegGeometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(3, -5, 0),
-        new THREE.Vector3(6, -8, 0)
+        new THREE.Vector3(3, -4, 0),   // Conexão com o corpo
+        new THREE.Vector3(6, -8, 0)    // Base da perna
     ]);
     const rightLeg = new THREE.Line(rightLegGeometry, legMaterial);
     lander.add(rightLeg);
+    
+    // Suporte diagonal para a perna direita
+    const rightSupportGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(4.5, -2, 0),  // Conexão com o corpo mais acima
+        new THREE.Vector3(6, -8, 0)     // Base da perna
+    ]);
+    const rightSupport = new THREE.Line(rightSupportGeometry, legMaterial);
+    lander.add(rightSupport);
+    
+    // Base da perna direita
+    const rightFootGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(7, -8, 0),
+        new THREE.Vector3(5, -8, 0)
+    ]);
+    const rightFoot = new THREE.Line(rightFootGeometry, legMaterial);
+    lander.add(rightFoot);
     
     scene.add(lander);
 }
