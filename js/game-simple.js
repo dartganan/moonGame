@@ -1,5 +1,6 @@
 // Jogo de Pouso Lunar com Three.js - Versão 2D
 import * as THREE from 'three';
+import { thrusterSound } from '../audio/thruster.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -471,6 +472,9 @@ function showGameOver(message, success) {
     gameOverText.textContent = message;
     gameOverElement.classList.remove('hidden');
     
+    // Parar som do propulsor quando o jogo termina
+    thrusterSound.stop();
+    
     if (success) {
         gameOverText.style.color = '#4CAF50';
     } else {
@@ -480,6 +484,9 @@ function showGameOver(message, success) {
 
 // Reiniciar o jogo
 function restartGame() {
+    // Parar som do propulsor ao reiniciar
+    thrusterSound.stop();
+    
     // Limpar cena
     if (gameState.gameOver && !gameState.landed) {
         createLander();
@@ -547,6 +554,8 @@ function handleKeyDown(event) {
         
         if (event.code === 'ArrowUp') {
             gameState.thrusterActive = true;
+            // Iniciar som do propulsor
+            thrusterSound.play();
         }
     }
 }
@@ -558,6 +567,8 @@ function handleKeyUp(event) {
         
         if (event.code === 'ArrowUp') {
             gameState.thrusterActive = false;
+            // Parar som do propulsor
+            thrusterSound.stop();
         }
     }
 }
