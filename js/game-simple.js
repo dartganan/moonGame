@@ -8,6 +8,7 @@ let lander, terrain;
 let fuelTanks = [];
 let gameActive = false;
 let clock = new THREE.Clock();
+let landingPadPosition = 0; // Nova variável para armazenar a posição da base de pouso
 
 // Estado do jogo
 const gameState = {
@@ -145,29 +146,75 @@ function createStars() {
 
 // Criar terreno
 function createTerrain() {
+    // Obter o tamanho atual da tela para cálculos de visibilidade
+    const aspectRatio = window.innerWidth / window.innerHeight;
+    const viewSize = 200;
+    const horizontalViewSize = aspectRatio * viewSize;
+    const visibleWidth = horizontalViewSize * 0.9; // 90% da largura visível
+    
     // Criando um terreno 2D (uma linha)
     const terrainPoints = [];
     const terrainWidth = 500;
     const segments = 100;
     const segmentWidth = terrainWidth / segments;
     
+    // Gerar uma posição aleatória para a base de pouso dentro da área visível
+    const minPosition = -visibleWidth / 2 + 20; // Margem de 20 unidades da borda esquerda
+    const maxPosition = visibleWidth / 2 - 20;  // Margem de 20 unidades da borda direita
+    landingPadPosition = Math.floor(Math.random() * (maxPosition - minPosition + 1)) + minPosition;
+    
+    console.log("Base de pouso posicionada em:", landingPadPosition);
+    console.log("Área visível:", -visibleWidth/2, "a", visibleWidth/2);
+    
+    // Área plana ao redor da base de pouso (garantindo uma superfície plana)
+    const flatAreaWidth = 30; // Largura da área plana
+    
+    // Primeiro, criamos um "chão" base
+    const floorY = 0;
+    
     // Criar pontos para o terreno com algumas variações
     for (let i = 0; i <= segments; i++) {
         const x = (i * segmentWidth) - (terrainWidth / 2);
-        let y = 0;
+        let y = floorY; // Começamos com o nível do chão
         
-        // Adicionar algumas variações de altura, mas manter o centro plano para a área de pouso
-        if (Math.abs(x) > 50) {
-            y = (Math.random() * 10) - 5;
+        // Calcular a distância até a base de pouso
+        const distanceToLandingPad = Math.abs(x - landingPadPosition);
+        
+        // Área plana para a base de pouso
+        if (distanceToLandingPad <= flatAreaWidth / 2) {
+            // Manter perfeitamente plano no nível do chão
+            y = floorY;
+        } 
+        // Transição suave entre a área plana e o terreno irregular
+        else if (distanceToLandingPad <= flatAreaWidth) {
+            // Criar uma transição suave usando uma função de interpolação
+            const t = (distanceToLandingPad - flatAreaWidth / 2) / (flatAreaWidth / 2);
+            // Altura aleatória SEMPRE POSITIVA
+            const randomHeight = Math.random() * 5;
+            y = floorY + randomHeight * t; // Adicionamos ao nível do chão
+        }
+        // Terreno irregular para o resto da superfície
+        else {
+            // Altura aleatória SEMPRE POSITIVA
+            const baseHeight = Math.random() * 20;
+            y = floorY + baseHeight; // Adicionamos ao nível do chão
             
-            // Adicionar algumas crateras
+            // Adicionar algumas crateras (pequenas depressões, mas nunca abaixo do chão)
             if (Math.random() > 0.9) {
-                y -= Math.random() * 5;
+                // Criar pequenas depressões, mas nunca abaixo do nível do chão
+                const craterDepth = Math.random() * 3;
+                y = Math.max(floorY, y - craterDepth);
             }
         }
         
         terrainPoints.push(new THREE.Vector2(x, y));
     }
+    
+    // Adicionar pontos extras abaixo do terreno para fechar a forma
+    // Isso garante que o terreno seja renderizado como um objeto sólido
+    terrainPoints.push(new THREE.Vector2(terrainWidth / 2, -5));
+    terrainPoints.push(new THREE.Vector2(-terrainWidth / 2, -5));
+    terrainPoints.push(new THREE.Vector2(-terrainWidth / 2, terrainPoints[0].y));
     
     const terrainShape = new THREE.Shape(terrainPoints);
     const terrainGeometry = new THREE.ShapeGeometry(terrainShape);
@@ -182,14 +229,37 @@ function createTerrain() {
     // Área de pouso
     const landingPadGeometry = new THREE.PlaneGeometry(20, 1);
     const landingPadMaterial = new THREE.MeshStandardMaterial({
-        color: 0x444444,
-        emissive: 0x222222,
+        color: 0xff0000,
+        emissive: 0x330000,
         side: THREE.DoubleSide
     });
     
     const landingPad = new THREE.Mesh(landingPadGeometry, landingPadMaterial);
-    landingPad.position.y = 0.5;
+    landingPad.position.set(landingPadPosition, 0.5, 0);
     scene.add(landingPad);
+    
+    // Adicionar marcadores visuais para indicar a base de pouso
+    addLandingPadMarkers(landingPadPosition);
+}
+
+// Função para adicionar marcadores visuais para a base de pouso
+function addLandingPadMarkers(position) {
+    // Criar geometria para os marcadores
+    const markerGeometry = new THREE.BoxGeometry(1, 2, 1);
+    const markerMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffff00,
+        emissive: 0x333300
+    });
+    
+    // Marcador esquerdo
+    const leftMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+    leftMarker.position.set(position - 10, 1, 0);
+    scene.add(leftMarker);
+    
+    // Marcador direito
+    const rightMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+    rightMarker.position.set(position + 10, 1, 0);
+    scene.add(rightMarker);
 }
 
 // Criar cápsula lunar
@@ -383,7 +453,7 @@ function checkLanding() {
     // Verificar se o pouso foi seguro
     const landingVelocity = Math.abs(gameState.velocity.y);
     const horizontalVelocity = Math.abs(gameState.velocity.x);
-    const isInLandingZone = Math.abs(lander.position.x) < 10;
+    const isInLandingZone = Math.abs(lander.position.x - landingPadPosition) < 10;
     const isLevel = Math.abs(gameState.rotation) < 0.3;
     
     if (landingVelocity <= SAFE_LANDING_VELOCITY && horizontalVelocity < 3 && isLevel && isInLandingZone) {
