@@ -10,6 +10,8 @@ let gameActive = false;
 let clock = new THREE.Clock();
 let landingPadPosition = 0; // Nova variável para armazenar a posição da base de pouso
 let explosionParticles = []; // Array para armazenar partículas da explosão
+let landingPad; // Referência à base de pouso
+let landingPadMarkers = []; // Array para armazenar os marcadores da base de pouso
 
 // Estado do jogo
 const gameState = {
@@ -235,7 +237,7 @@ function createTerrain() {
         side: THREE.DoubleSide
     });
     
-    const landingPad = new THREE.Mesh(landingPadGeometry, landingPadMaterial);
+    landingPad = new THREE.Mesh(landingPadGeometry, landingPadMaterial);
     landingPad.position.set(landingPadPosition, 0.5, 0);
     scene.add(landingPad);
     
@@ -245,6 +247,9 @@ function createTerrain() {
 
 // Função para adicionar marcadores visuais para a base de pouso
 function addLandingPadMarkers(position) {
+    // Limpar marcadores anteriores
+    landingPadMarkers = [];
+    
     // Criar geometria para os marcadores
     const markerGeometry = new THREE.BoxGeometry(1, 2, 1);
     const markerMaterial = new THREE.MeshStandardMaterial({
@@ -256,11 +261,13 @@ function addLandingPadMarkers(position) {
     const leftMarker = new THREE.Mesh(markerGeometry, markerMaterial);
     leftMarker.position.set(position - 10, 1, 0);
     scene.add(leftMarker);
+    landingPadMarkers.push(leftMarker);
     
     // Marcador direito
     const rightMarker = new THREE.Mesh(markerGeometry, markerMaterial);
     rightMarker.position.set(position + 10, 1, 0);
     scene.add(rightMarker);
+    landingPadMarkers.push(rightMarker);
 }
 
 // Criar cápsula lunar
@@ -747,6 +754,25 @@ function restartGame() {
         scene.remove(particle);
     }
     explosionParticles = [];
+    
+    // Remover o terreno existente
+    if (terrain) {
+        scene.remove(terrain);
+    }
+    
+    // Remover a base de pouso existente
+    if (landingPad) {
+        scene.remove(landingPad);
+    }
+    
+    // Remover os marcadores da base de pouso
+    for (const marker of landingPadMarkers) {
+        scene.remove(marker);
+    }
+    landingPadMarkers = [];
+    
+    // Criar novo terreno com nova posição para a base de pouso
+    createTerrain();
     
     // Criar novos tanques
     createFuelTanks(5);
