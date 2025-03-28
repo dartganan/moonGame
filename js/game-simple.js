@@ -9,6 +9,7 @@ let fuelTanks = [];
 let gameActive = false;
 let clock = new THREE.Clock();
 let landingPadPosition = 0; // Nova variável para armazenar a posição da base de pouso
+let explosionParticles = []; // Array para armazenar partículas da explosão
 
 // Estado do jogo
 const gameState = {
@@ -367,6 +368,183 @@ function createThrusterEffect() {
     }, 100);
 }
 
+// Verificar colisão com o terreno
+function checkTerrainCollision() {
+    if (!terrain || !lander || gameState.gameOver) return false;
+    
+    // Obter a posição da nave
+    const landerX = lander.position.x;
+    const landerY = lander.position.y;
+    
+    // Raio de colisão da nave (considerando o tamanho da nave)
+    const landerRadius = 5;
+    
+    // Verificar se está na zona de pouso
+    const distanceToLandingPad = Math.abs(landerX - landingPadPosition);
+    const isInLandingZone = distanceToLandingPad < 10;
+    
+    // Se estiver na zona de pouso e próximo ao solo, verificar pouso normal
+    if (isInLandingZone && landerY <= 5) {
+        checkLanding();
+        return true;
+    } 
+    // Se não estiver na zona de pouso, verificar colisão com o terreno
+    else if (!isInLandingZone) {
+        // Encontrar o ponto do terreno mais próximo da posição x da nave
+        const terrainGeometry = terrain.geometry;
+        const vertices = terrainGeometry.attributes.position.array;
+        
+        // Procurar o ponto do terreno mais próximo da posição x da nave
+        let closestTerrainHeight = 0;
+        let minDistance = Infinity;
+        
+        for (let i = 0; i < vertices.length; i += 3) {
+            const vertexX = vertices[i];
+            const vertexY = vertices[i + 1];
+            
+            const distance = Math.abs(vertexX - landerX);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestTerrainHeight = vertexY;
+            }
+        }
+        
+        // Verificar colisão considerando também as pernas da nave
+        // A parte inferior da nave está em landerY - landerRadius
+        const naveBottom = landerY - landerRadius;
+        
+        // Adicionar uma margem de colisão para detectar assim que tocar
+        const collisionMargin = 0.5;
+        
+        // Se qualquer parte da nave estiver tocando o terreno, ocorreu colisão
+        if (naveBottom <= closestTerrainHeight + collisionMargin) {
+            console.log("Colisão detectada! Altura do terreno:", closestTerrainHeight, "Parte inferior da nave:", naveBottom);
+            createExplosion();
+            return true;
+        }
+        
+        // Verificar também se as laterais da nave estão colidindo com o terreno
+        // Verificamos alguns pontos ao redor da nave para uma detecção mais precisa
+        const checkPoints = [
+            { x: landerX - landerRadius, y: landerY - landerRadius * 0.8 }, // Ponto inferior esquerdo
+            { x: landerX + landerRadius, y: landerY - landerRadius * 0.8 }, // Ponto inferior direito
+            { x: landerX - landerRadius * 0.5, y: landerY - landerRadius * 0.5 }, // Ponto meio-esquerdo
+            { x: landerX + landerRadius * 0.5, y: landerY - landerRadius * 0.5 }  // Ponto meio-direito
+        ];
+        
+        for (const point of checkPoints) {
+            // Verificar se este ponto está na zona de pouso
+            const pointDistanceToLandingPad = Math.abs(point.x - landingPadPosition);
+            const pointIsInLandingZone = pointDistanceToLandingPad < 10;
+            
+            // Pular verificação se o ponto estiver na zona de pouso
+            if (pointIsInLandingZone) continue;
+            
+            // Encontrar a altura do terreno neste ponto
+            let terrainHeightAtPoint = 0;
+            let minDist = Infinity;
+            
+            for (let i = 0; i < vertices.length; i += 3) {
+                const vertexX = vertices[i];
+                const vertexY = vertices[i + 1];
+                
+                const dist = Math.abs(vertexX - point.x);
+                if (dist < minDist) {
+                    minDist = dist;
+                    terrainHeightAtPoint = vertexY;
+                }
+            }
+            
+            // Se este ponto da nave estiver tocando o terreno, ocorreu colisão
+            if (point.y <= terrainHeightAtPoint + collisionMargin) {
+                console.log("Colisão lateral detectada! Ponto:", point, "Altura do terreno:", terrainHeightAtPoint);
+                createExplosion();
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+// Criar efeito de explosão
+function createExplosion() {
+    // Parar o som do propulsor
+    thrusterSound.stop();
+    
+    // Remover a nave
+    scene.remove(lander);
+    
+    // Criar partículas de explosão
+    const particleCount = 50;
+    const explosionGeometry = new THREE.CircleGeometry(0.5, 8);
+    
+    // Cores para a explosão
+    const colors = [0xffff00, 0xff6600, 0xff3300, 0xff0000];
+    
+    for (let i = 0; i < particleCount; i++) {
+        const material = new THREE.MeshBasicMaterial({
+            color: colors[Math.floor(Math.random() * colors.length)],
+            transparent: true,
+            opacity: 1.0
+        });
+        
+        const particle = new THREE.Mesh(explosionGeometry, material);
+        
+        // Posicionar partícula na posição da nave
+        particle.position.set(
+            lander.position.x + (Math.random() * 10 - 5),
+            lander.position.y + (Math.random() * 10 - 5),
+            0
+        );
+        
+        // Velocidade aleatória
+        particle.userData = {
+            velocity: {
+                x: (Math.random() - 0.5) * 5,
+                y: (Math.random() - 0.5) * 5
+            },
+            rotation: Math.random() * 0.2 - 0.1,
+            opacity: 1.0,
+            life: 2.0 // Tempo de vida em segundos
+        };
+        
+        scene.add(particle);
+        explosionParticles.push(particle);
+    }
+    
+    // Mostrar mensagem de game over
+    gameState.gameOver = true;
+    showGameOver("NAVE DESTRUÍDA! Colisão com o terreno.", false);
+}
+
+// Atualizar partículas da explosão
+function updateExplosion(deltaTime) {
+    // Atualizar cada partícula
+    for (let i = explosionParticles.length - 1; i >= 0; i--) {
+        const particle = explosionParticles[i];
+        const data = particle.userData;
+        
+        // Atualizar posição
+        particle.position.x += data.velocity.x * deltaTime;
+        particle.position.y += data.velocity.y * deltaTime;
+        
+        // Aplicar rotação
+        particle.rotation.z += data.rotation;
+        
+        // Reduzir opacidade com o tempo
+        data.life -= deltaTime;
+        data.opacity = data.life / 2.0;
+        particle.material.opacity = data.opacity;
+        
+        // Remover partículas que já desapareceram
+        if (data.life <= 0) {
+            scene.remove(particle);
+            explosionParticles.splice(i, 1);
+        }
+    }
+}
+
 // Atualizar física
 function updatePhysics(deltaTime) {
     if (!gameActive || gameState.gameOver) return;
@@ -374,10 +552,8 @@ function updatePhysics(deltaTime) {
     // Aplicar gravidade
     gameState.velocity.y -= GRAVITY * deltaTime;
     
-    // Aplicar propulsores
+    // Aplicar propulsão
     if (gameState.thrusterActive && gameState.fuel > 0) {
-        // Direção do empuxo - Invertida em relação à rotação da nave
-        // Usando o negativo do seno para inverter a direção horizontal
         const thrustX = -Math.sin(gameState.rotation) * THRUST_POWER;
         const thrustY = Math.cos(gameState.rotation) * THRUST_POWER;
         
@@ -414,9 +590,7 @@ function updatePhysics(deltaTime) {
     gameState.altitude = lander.position.y;
     
     // Verificar colisão com o terreno
-    if (lander.position.y <= 5) {
-        checkLanding();
-    }
+    checkTerrainCollision();
     
     // Verificar colisão com tanques de combustível
     checkFuelTankCollisions();
@@ -568,6 +742,12 @@ function restartGame() {
     }
     fuelTanks = [];
     
+    // Remover partículas de explosão existentes
+    for (const particle of explosionParticles) {
+        scene.remove(particle);
+    }
+    explosionParticles = [];
+    
     // Criar novos tanques
     createFuelTanks(5);
     
@@ -651,6 +831,9 @@ function animate() {
     
     // Atualizar física
     updatePhysics(Math.min(deltaTime, 0.1));
+    
+    // Atualizar partículas da explosão
+    updateExplosion(Math.min(deltaTime, 0.1));
     
     // Renderizar cena
     renderer.render(scene, camera);
