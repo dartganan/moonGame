@@ -1,6 +1,8 @@
 // Jogo de Pouso Lunar com Three.js - Versão 2D
 import * as THREE from 'three';
 import { thrusterSound } from '../audio/thruster.js';
+import { explosionSound } from '../audio/explosion.js';
+import { landingSound } from '../audio/landing.js';
 
 // Variáveis globais
 let scene, camera, renderer;
@@ -479,6 +481,9 @@ function createExplosion() {
     // Parar o som do propulsor
     thrusterSound.stop();
     
+    // Tocar som de explosão
+    explosionSound.play();
+    
     // Remover a nave
     scene.remove(lander);
     
@@ -645,11 +650,17 @@ function checkLanding() {
         gameState.velocity.x = 0;
         gameState.velocity.y = 0;
         
+        // Tocar som de pouso bem-sucedido
+        landingSound.play();
+        
         showGameOver("POUSO BEM-SUCEDIDO!", true);
     } else {
         // Pouso mal-sucedido
         scene.remove(lander);
         gameState.gameOver = true;
+        
+        // Tocar som de explosão
+        explosionSound.play();
         
         let message = "NAVE DESTRUÍDA!";
         if (landingVelocity > SAFE_LANDING_VELOCITY) {
